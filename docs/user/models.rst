@@ -273,19 +273,19 @@ a column can't be both, there can't be more than one of each, and there must be 
         referrer = Column(String, hash_key=True)
         version = Column(Integer, range_key=True)
 
-By default values will be stored in DynamoDB under the name of the column in the model definition (its ``model_name``).
+By default values will be stored in DynamoDB under the name of the column in the model definition (its ``name``).
 If you want to conserve read and write units, you can use shorter names for attributes in DynamoDB (attribute names
-are counted against your provisioned throughput).  Like the ``table_name`` in Meta, the optional ``name`` parameter
-lets you use descriptive model names without binding you to those names in DynamoDB.  This is also convenient when
-mapping an existing table, or multi-model tables where an attribute can be interpreted multiple ways.
+are counted against your provisioned throughput).  Like the ``table_name`` in Meta, the optional ``dynamo_name``
+parameter lets you use descriptive model names without binding you to those names in DynamoDB.  This is also
+convenient when mapping an existing table, or multi-model tables where an attribute can be interpreted multiple ways.
 
 The following model is identical to the one just defined, except that each attribute is stored using a short name:
 
 .. code-block:: python
 
     class Impression(BaseModel):
-        referrer = Column(String, hash_key=True, name="ref")
-        version = Column(Integer, range_key=True, name="v")
+        referrer = Column(String, hash_key=True, dynamo_name="ref")
+        version = Column(Integer, range_key=True, dynamo_name="v")
 
 Locally, the model names "referrer" and "version" are still used.  An instance would be constructed as usual:
 
@@ -330,7 +330,7 @@ names.  If you specify a list of columns, key columns will always be included.
             ["email", "username"], hash_key="created_on")
 
 A GlobalSecondaryIndex must have a ``hash_key``, and can optionally have a ``range_key``.  This can either be the
-model_name of a column, or the column object itself:
+name of a column, or the column object itself:
 
 .. code-block:: python
 
@@ -352,14 +352,14 @@ instead default to 1.
 
     GlobalSecondaryIndex("all", hash_key=version, read_units=500, write_units=20)
 
-As with :class:`~bloop.models.Column` you can provide a ``name`` for the GSI in DynamoDB.  This can be used to map
-to an existing index while still using a pythonic model name locally:
+As with :class:`~bloop.models.Column` you can provide a ``dynamo_name`` for the GSI in DynamoDB.  This can be used
+to map to an existing index while still using a pythonic model name locally:
 
 .. code-block:: python
 
     class Impression(BaseModel):
         ...
-        by_email = GlobalSecondaryIndex("keys", hash_key=email, name="index_email")
+        by_email = GlobalSecondaryIndex("keys", hash_key=email, dynamo_name="index_email")
 
 .. seealso::
 
@@ -386,11 +386,13 @@ You can specify a name to use in DynamoDB, just like :class:`~bloop.models.Colum
 
     class Impression(BaseModel):
         url = Column(String, hash_key=True)
-        user_agent = Column(String, range_key=True, name="ua")
-        visited_at = Column(DateTime, name="at")
+        user_agent = Column(String, range_key=True, dynamo_name="ua")
+        visited_at = Column(DateTime, dynamo_name="at")
 
         by_date = LocalSecondaryIndex(
-        "keys", range_key=visited_at, name="index_date")
+            "keys",
+            range_key=visited_at,
+            dynamo_name="index_date")
 
 The final optional parameter is ``strict``, which defaults to True.  This controls whether DynamoDB may incur
 additional reads on the table when querying the LSI for columns outside the projection.  Bloop enforces this by

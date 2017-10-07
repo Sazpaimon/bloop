@@ -25,7 +25,7 @@ ModelMetaclass
 .. autoclass:: bloop.models.ModelMetaclass
     :members:
 
-    The metaclass for :class:`~bloop.models.BaseModel`.  Binds ``model_name`` to each :class:`~bloop.models.Column`;
+    The metaclass for :class:`~bloop.models.BaseModel`.  Binds ``name`` to each :class:`~bloop.models.Column`;
     validates key configuration; binds the model to each :class:`~bloop.models.Index`; populates model's ``Meta``
     with modeling metadata (``columns``, ``keys``, ``indexes``, etc).
 
@@ -38,7 +38,7 @@ Index
 
     .. attribute:: dynamo_name
 
-        The name of this index in DynamoDB.  Defaults to the index's :data:`~Index.model_name`.
+        The name of this index in DynamoDB.  Defaults to the index's :data:`~Index.name`.
 
     .. attribute:: hash_key
 
@@ -50,6 +50,11 @@ Index
         The model this index is attached to.
 
     .. attribute:: model_name
+
+        .. deprecated: 1.3
+            Use :attr:`~bloop.models.Index.name` instead.
+
+    .. attribute:: name
 
         The name of this index in the model.  Set during :func:`~bloop.models.Index._bind`.
 

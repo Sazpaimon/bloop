@@ -35,10 +35,10 @@ from ..helpers.models import Document, User
 
 
 class MockColumn(Column):
-    """model, model_name, dynamo_name, __repr__"""
+    """model, name, dynamo_name, __repr__"""
     def __init__(self, name):
         super().__init__(String(), name="d_" + name)
-        self.model_name = name
+        self.name = name
 
         # Mock model so this can render as M.name
         self.model = type("M", tuple(), {})
@@ -1411,7 +1411,7 @@ def test_unsupported_mixin_function_conditions(op, typedefs, args):
     for typedef in typedefs:
         column = Column(typedef, name="d")
         column.model = Model
-        column.model_name = "c"
+        column.name = "c"
         with pytest.raises(InvalidCondition):
             getattr(column, op)(*args)
             column.begins_with(object())
@@ -1432,7 +1432,7 @@ def test_unsupported_mixin_comparison_conditions(op, typedef):
         id = Column(Integer, hash_key=True)
     column = Column(typedef, name="d")
     column.model = Model
-    column.model_name = "c"
+    column.name = "c"
     with pytest.raises(InvalidCondition):
         op(column, "value")
 

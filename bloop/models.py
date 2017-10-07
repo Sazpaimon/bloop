@@ -2,6 +2,7 @@ import collections.abc
 import logging
 
 import declare
+import warnings
 
 from .conditions import ComparisonMixin
 from .exceptions import InvalidIndex, InvalidModel, InvalidStream
@@ -14,11 +15,11 @@ logger = logging.getLogger("bloop.models")
 
 
 def loaded_columns(obj):
-    """Yields each (model_name, value) tuple for all columns in an object that aren't missing"""
-    for column in sorted(obj.Meta.columns, key=lambda c: c.model_name):
-        value = getattr(obj, column.model_name, missing)
+    """Yields each (name, value) tuple for all columns in an object that aren't missing"""
+    for column in sorted(obj.Meta.columns, key=lambda c: c.name):
+        value = getattr(obj, column.name, missing)
         if value is not missing:
-            yield column.model_name, value
+            yield column.name, value
 
 
 def validate_projection(projection):
@@ -219,11 +220,11 @@ class BaseModel(metaclass=ModelMetaclass):
 
     def __init__(self, **attrs):
         # Only set values from **attrs if there's a
-        # corresponding `model_name` for a column in the model
+        # corresponding `name` for a column in the model
         for column in self.Meta.columns:
-            value = attrs.get(column.model_name, missing)
+            value = attrs.get(column.name, missing)
             if value is not missing:
-                setattr(self, column.model_name, value)
+                setattr(self, column.name, value)
 
     @classmethod
     def _load(cls, attrs, *, context, **kwargs):
@@ -244,7 +245,7 @@ class BaseModel(metaclass=ModelMetaclass):
             lambda item: item[1] is not None,
             ((
                 column.dynamo_name,
-                dump(column.typedef, getattr(obj, column.model_name, None), context=context, **kwargs)
+                dump(column.typedef, getattr(obj, column.name, None), context=context, **kwargs)
             ) for column in cls.Meta.columns))
         return dict(filtered) or None
 
@@ -296,21 +297,48 @@ class Index(declare.Field):
         # <LSI[User.by_email=include]>
         return "<{}[{}.{}={}]>".format(
             cls_name,
-            self.model.__name__, self.model_name,
+            self.model.__name__, self.name,
             self.projection["mode"]
         )
 
     @property
+    def model_name(self):
+        warnings.warn(
+            "{0}.model_name will be removed in 2.0.0; use {0}.name instead".format(self.__class__.__name__),
+            DeprecationWarning, stacklevel=2)
+        return super().model_name
+
+    @model_name.setter
+    def model_name(self, value):
+        warnings.warn(
+            "{0}.model_name will be removed in 2.0.0; use {0}.name instead".format(self.__class__.__name__),
+            DeprecationWarning, stacklevel=2)
+        # https://stackoverflow.com/q/10810369
+        # https://bugs.python.org/issue14965
+        # super().model_name = value
+        super(Index, self.__class__).model_name.fset(self, value)
+
+    @property
+    def name(self):
+        with warnings.catch_warnings():
+            return self.model_name
+
+    @name.setter
+    def name(self, value):
+        with warnings.catch_warnings():
+            self.model_name = value
+
+    @property
     def dynamo_name(self):
         if self._dynamo_name is None:
-            return self.model_name
+            return self.name
         return self._dynamo_name
 
     def _bind(self, model):
         """Compute attributes and resolve column names.
 
         * If hash and/or range keys are strings, resolve them to :class:`~bloop.models.Column` instances from
-          the model by ``model_name``.
+          the model by ``name``.
         * If projection is a list of strings, resolve each to a Column instance.
         * Compute :data:`~Index.projection` dict from model Metadata and Index's temporary ``projection``
           attribute.
@@ -320,8 +348,8 @@ class Index(declare.Field):
         """
         self.model = model
 
-        # Index by model_name so we can replace hash_key, range_key with the proper `bloop.Column` object
-        columns = declare.index(model.Meta.columns, "model_name")
+        # Index by name so we can replace hash_key, range_key with the proper `bloop.Column` object
+        columns = declare.index(model.Meta.columns, "name")
         if isinstance(self.hash_key, str):
             self.hash_key = columns[self.hash_key]
         if not isinstance(self.hash_key, Column):
@@ -345,7 +373,7 @@ class Index(declare.Field):
         elif self.projection["mode"] == "all":
             self.projection["included"] = model.Meta.columns
         elif self.projection["mode"] == "include":  # pragma: no branch
-            # model_name -> Column
+            # name -> Column
             if all(isinstance(p, str) for p in self.projection["included"]):
                 projection = set(columns[name] for name in self.projection["included"])
             else:
@@ -363,17 +391,17 @@ class Index(declare.Field):
     def set(self, obj, value):
         raise AttributeError(
             "{}.{} is a {}".format(
-                self.model.__name__, self.model_name, self.__class__.__name__))
+                self.model.__name__, self.name, self.__class__.__name__))
 
     def delete(self, obj):
         raise AttributeError(
             "{}.{} is a {}".format(
-                self.model.__name__, self.model_name, self.__class__.__name__))
+                self.model.__name__, self.name, self.__class__.__name__))
 
     def get(self, obj):
         raise AttributeError(
             "{}.{} is a {}".format(
-                self.model.__name__, self.model_name, self.__class__.__name__))
+                self.model.__name__, self.name, self.__class__.__name__))
 
 
 class GlobalSecondaryIndex(Index):
@@ -404,7 +432,7 @@ class GlobalSecondaryIndex(Index):
 
 
 class LocalSecondaryIndex(Index):
-    """See `LocalSecondaryIndex`_ in the DynamoDB Developer GUide for details.
+    """See `LocalSecondaryIndex`_ in the DynamoDB Developer Guide for details.
 
     Unlike :class:`~bloop.models.GlobalSecondaryIndex`\, LSIs share their throughput with the table,
     and their hash key is always the table hash key.
@@ -431,8 +459,8 @@ class LocalSecondaryIndex(Index):
     def _bind(self, model):
         if not model.Meta.range_key:
             raise InvalidIndex("An LSI requires the Model to have a range key.")
-        # this is model_name (string) because super()._bind will do the string -> Column lookup
-        self.hash_key = model.Meta.hash_key.model_name
+        # this is name (string) because super()._bind will do the string -> Column lookup
+        self.hash_key = model.Meta.hash_key.name
         super()._bind(model)
 
     @property
@@ -487,14 +515,41 @@ class Column(declare.Field, ComparisonMixin):
         # <Column[File.fragment=range]>
         return "<Column[{}.{}{}]>".format(
             self.model.__name__,
-            self.model_name,
+            self.name,
             extra
         )
 
     @property
+    def model_name(self):
+        warnings.warn(
+            "Column.model_name will be removed in 2.0.0; use Column.name instead",
+            DeprecationWarning, stacklevel=2)
+        return super().model_name
+
+    @model_name.setter
+    def model_name(self, value):
+        warnings.warn(
+            "Column.model_name will be removed in 2.0.0; use Column.name instead",
+            DeprecationWarning, stacklevel=2)
+        # https://stackoverflow.com/q/10810369
+        # https://bugs.python.org/issue14965
+        # super().model_name = value
+        super(Column, self.__class__).model_name.fset(self, value)
+
+    @property
+    def name(self):
+        with warnings.catch_warnings():
+            return self.model_name
+
+    @name.setter
+    def name(self, value):
+        with warnings.catch_warnings():
+            self.model_name = value
+
+    @property
     def dynamo_name(self):
         if self._dynamo_name is None:
-            return self.model_name
+            return self.name
         return self._dynamo_name
 
     def set(self, obj, value):

@@ -68,7 +68,7 @@ def sync(obj, engine):
     snapshot = Condition()
     # Only expect values (or lack of a value) for columns that have been explicitly set
     for column in sorted(_obj_tracking[obj]["marked"], key=lambda col: col.dynamo_name):
-        value = getattr(obj, column.model_name, None)
+        value = getattr(obj, column.name, None)
         value = engine._dump(column.typedef, value)
         condition = column == value
         # The renderer shouldn't try to dump the value again.
@@ -368,7 +368,7 @@ class ConditionRenderer:
                 filter(lambda c: c not in obj.Meta.keys, get_marked(obj)),
                 key=lambda c: c.dynamo_name):
             name_ref = self.refs.any_ref(column=column)
-            value_ref = self.refs.any_ref(column=column, value=getattr(obj, column.model_name, None))
+            value_ref = self.refs.any_ref(column=column, value=getattr(obj, column.name, None))
             # Can't set to an empty value
             if is_empty(value_ref):
                 self.refs.pop_refs(value_ref)
@@ -893,7 +893,7 @@ def printable_column_name(column, path=None):
 
     User.name[3]["foo"][0]["bar"] -> name[3].foo[0].bar
     """
-    pieces = [column.model_name]
+    pieces = [column.name]
     path = path or path_of(column)
     for segment in path:
         if isinstance(segment, str):

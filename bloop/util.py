@@ -57,7 +57,7 @@ def unpack_from_dynamodb(*, attrs, expected, model=None, obj=None, engine=None, 
     for column in expected:
         value = attrs.get(column.dynamo_name, None)
         value = engine._load(column.typedef, value, context=context, **kwargs)
-        setattr(obj, column.model_name, value)
+        setattr(obj, column.name, value)
     return obj
 
 

@@ -14,6 +14,38 @@ __ https://gist.github.com/numberoverzero/c5d0fc6dea624533d004239a27e545ad
 --------------
 
 --------------------
+ 1.3.0 - 2017-10-08
+--------------------
+
+This release is exclusively to prepare users for the ``name``/``model_name``/``dynamo_name`` changes coming in 2.0;
+your 1.2.0 code will continue to work as usual but will raise ``DeprecationWarning`` when accessing ``model_name`` on
+a Column or Index, or when specifying the ``name=`` kwarg in the ``__init__`` method of ``Column``,
+``GlobalSecondaryIndex``, or ``LocalSecondaryIndex``.
+
+Previously it was unclear if ``Column.model_name`` was the name of this column in its model, or the name of the model
+it is attached to (eg. a shortcut for ``Column.model.__name__``).  Additionally the ``name=`` kwarg actually mapped to
+the object's ``.dynamo_name`` value, which was not obvious.
+
+Now the ``Column.name`` attribute will hold the name of the column in its model, while ``Column.dynamo_name`` will
+hold the name used in DynamoDB, and is passed during initialization as ``dynamo_name=``.  Accessing ``model_name`` or
+passing ``name=`` during ``__init__`` will raise deprecation warnings, and bloop 2.0.0 will remove the deprecated
+properties and ignore the deprecated kwargs.
+
+Added
+=====
+
+* ``Column.name`` is the new home of the ``Column.model_name`` attribute.  The same is true for
+  ``Index``, ``GlobalSecondaryIndex``, and ``LocalSecondaryIndex``.
+* The ``__init__`` method of ``Column``, ``Index``, ``GlobalSecondaryIndex``, and ``LocalSecondaryIndex`` now takes
+  ``dynamo_name=`` in place of ``name=``.
+
+Changed
+=======
+
+* Accessing ``Column.model_name`` raises ``DeprecationWarning``, and the same for Index/GSI/LSI.
+* Providing ``Column(name=)`` raises ``DeprecationWarning``, and the same for Index/GSI/LSI.
+
+--------------------
  1.2.0 - 2017-09-11
 --------------------
 

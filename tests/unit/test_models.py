@@ -89,7 +89,7 @@ def test_load_dump(engine):
     loaded_user = engine._load(User, serialized)
 
     missing = object()
-    for attr in (c.model_name for c in User.Meta.columns):
+    for attr in (c.name for c in User.Meta.columns):
         assert getattr(loaded_user, attr, missing) == getattr(user, attr, missing)
 
     assert engine._dump(User, user) == serialized
@@ -105,11 +105,11 @@ def test_load_dump_none(engine):
     # which don't have those attributes.  That is, `not hasattr(user, "id")`
     # whereas `getattr(loaded_user, "id") is None`
     loaded_user = engine._load(User, None)
-    for attr in (c.model_name for c in User.Meta.columns):
+    for attr in (c.name for c in User.Meta.columns):
         assert getattr(loaded_user, attr) is None
 
     loaded_user = engine._load(User, {})
-    for attr in (c.model_name for c in User.Meta.columns):
+    for attr in (c.name for c in User.Meta.columns):
         assert getattr(loaded_user, attr) is None
 
 
@@ -409,18 +409,18 @@ def test_column_dynamo_name():
     """ Returns model name unless dynamo name is specified """
     column = Column(Integer)
     # Normally set when a class is defined
-    column.model_name = "foo"
+    column.name = "foo"
     assert column.dynamo_name == "foo"
 
     column = Column(Integer, name="foo")
-    column.model_name = "bar"
+    column.name = "bar"
     assert column.dynamo_name == "foo"
 
 
 def test_column_repr():
     column = Column(Integer, name="f")
     column.model = User
-    column.model_name = "foo"
+    column.name = "foo"
     assert repr(column) == "<Column[User.foo]>"
 
     column.hash_key = True
@@ -434,7 +434,7 @@ def test_column_repr():
 def test_column_repr_path():
     column = Column(Integer, name="f")
     column.model = User
-    column.model_name = "foo"
+    column.name = "foo"
 
     assert repr(column[3]["foo"]["bar"][2][1]) == "<Proxy[User.foo[3].foo.bar[2][1]]>"
 
@@ -526,11 +526,11 @@ def test_index_dynamo_name():
     """returns model name unless dynamo name is specified"""
     index = Index(projection="keys")
     # Normally set when a class is defined
-    index.model_name = "foo"
+    index.name = "foo"
     assert index.dynamo_name == "foo"
 
     index = Index(name="foo", projection="keys")
-    index.model_name = "bar"
+    index.name = "bar"
     assert index.dynamo_name == "foo"
 
 
@@ -660,7 +660,7 @@ def test_gsi_default_throughput():
 def test_index_repr(projection):
     index = Index(projection=projection, name="f")
     index.model = User
-    index.model_name = "by_foo"
+    index.name = "by_foo"
     if isinstance(projection, list):
         projection = "include"
     assert repr(index) == "<Index[User.by_foo={}]>".format(projection)
@@ -669,14 +669,14 @@ def test_index_repr(projection):
 def test_lsi_repr():
     index = LocalSecondaryIndex(projection="all", range_key="key", name="f")
     index.model = User
-    index.model_name = "by_foo"
+    index.name = "by_foo"
     assert repr(index) == "<LSI[User.by_foo=all]>"
 
 
 def test_gsi_repr():
     index = GlobalSecondaryIndex(projection="all", hash_key="key", name="f")
     index.model = User
-    index.model_name = "by_foo"
+    index.name = "by_foo"
     assert repr(index) == "<GSI[User.by_foo=all]>"
 
 
