@@ -171,7 +171,7 @@ def test_load_shared_table(engine, session, caplog):
         id = Column(String, hash_key=True)
         range = Column(String, range_key=True)
         first = Column(String)
-        as_date = Column(DateTime, name="shared")
+        as_date = Column(DateTime, dynamo_name="shared")
 
     class SecondModel(BaseModel):
         class Meta:
@@ -180,7 +180,7 @@ def test_load_shared_table(engine, session, caplog):
         id = Column(String, hash_key=True)
         range = Column(String, range_key=True)
         second = Column(String)
-        as_string = Column(String, name="shared")
+        as_string = Column(String, dynamo_name="shared")
     engine.bind(BaseModel)
 
     id = "foo"

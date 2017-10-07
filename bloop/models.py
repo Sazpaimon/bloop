@@ -273,13 +273,21 @@ class Index(declare.Field):
         Included columns will be projected into the index.  Key columns are always included.
     :param hash_key: The column that the index can be queried against.  Always the table hash_key for LSIs.
     :param range_key: The column that the index can be sorted on.  Always required for an LSI.  Default is None.
-    :param str name: *(Optional)* The index's name in in DynamoDB. Defaults to the index’s name in the model.
+    :param str dynamo_name: *(Optional)* The index's name in DynamoDB. Defaults to the index’s name in the model.
     """
-    def __init__(self, *, projection, hash_key=None, range_key=None, name=None, **kwargs):
+    def __init__(self, *, projection, hash_key=None, range_key=None, dynamo_name=None, **kwargs):
         self.model = None
         self.hash_key = hash_key
         self.range_key = range_key
-        self._dynamo_name = name
+        name = kwargs.pop("name", None)
+        if name is not None:
+            warnings.warn(
+                "The 'name=' kwarg will be removed in 2.0.0; use 'dynamo_name=' instead",
+                DeprecationWarning, stacklevel=2)
+            if dynamo_name is not None:
+                raise ValueError("Cannot provide 'name' and 'dynamo_name'")
+            dynamo_name = name
+        self._dynamo_name = dynamo_name
         super().__init__(**kwargs)
 
         self.projection = validate_projection(projection)
@@ -417,7 +425,7 @@ class GlobalSecondaryIndex(Index):
     :param int write_units:  *(Optional)* Provisioned write units for the index.  Default is None.
         When no value is provided and the index does not exist, it will be created with 1 write unit.  If the index
         already exists, it will use the actual index's write units.
-    :param str name: *(Optional)* The index's name in in DynamoDB. Defaults to the index’s name in the model.
+    :param str dynamo_name: *(Optional)* The index's name in DynamoDB. Defaults to the index’s name in the model.
 
     .. _GlobalSecondaryIndex: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html
     """
@@ -425,8 +433,11 @@ class GlobalSecondaryIndex(Index):
             self, *, projection,
             hash_key, range_key=None,
             read_units=None, write_units=None,
-            name=None, **kwargs):
-        super().__init__(hash_key=hash_key, range_key=range_key, name=name, projection=projection, **kwargs)
+            dynamo_name=None, **kwargs):
+        super().__init__(
+            hash_key=hash_key, range_key=range_key,
+            dynamo_name=dynamo_name, projection=projection,
+            **kwargs)
         self.write_units = write_units
         self.read_units = read_units
 
@@ -440,20 +451,23 @@ class LocalSecondaryIndex(Index):
     :param projection: Either "keys", "all", or a list of column name or objects.
         Included columns will be projected into the index.  Key columns are always included.
     :param range_key: The column that the index can be sorted against.
-    :param str name: *(Optional)* The index's name in in DynamoDB. Defaults to the index’s name in the model.
+    :param str dynamo_name: *(Optional)* The index's name in DynamoDB. Defaults to the index’s name in the model.
     :param bool strict: *(Optional)* Restricts queries and scans on the LSI to columns in the projection.
         When False, DynamoDB may silently incur additional reads to load results.  You should not disable this
         unless you have an explicit need.  Default is True.
 
     .. _LocalSecondaryIndex: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html
     """
-    def __init__(self, *, projection, range_key, name=None, strict=True, **kwargs):
+    def __init__(self, *, projection, range_key, dynamo_name=None, strict=True, **kwargs):
         # Hash key MUST be the table hash; do not specify
         if "hash_key" in kwargs:
             raise InvalidIndex("An LSI shares its hash key with the Model.")
         if ("write_units" in kwargs) or ("read_units" in kwargs):
             raise InvalidIndex("An LSI shares its provisioned throughput with the Model.")
-        super().__init__(range_key=range_key, name=name, projection=projection, **kwargs)
+        super().__init__(
+            range_key=range_key,
+            dynamo_name=dynamo_name, projection=projection,
+            **kwargs)
         self.projection["strict"] = strict
 
     def _bind(self, model):
@@ -491,12 +505,20 @@ class Column(declare.Field, ComparisonMixin):
     :param bool range_key:  *(Optional)* True if this is the model's range key.
         A model can have at most one Column with
         ``range_key=True``.  Default is False.
-    :param str name: *(Optional)* The index's name in in DynamoDB. Defaults to the index’s name in the model.
+    :param str dynamo_name: *(Optional)* The column's name in DynamoDB. Defaults to the index’s name in the model.
     """
-    def __init__(self, typedef, hash_key=False, range_key=False, name=None, **kwargs):
+    def __init__(self, typedef, hash_key=False, range_key=False, dynamo_name=None, **kwargs):
         self.hash_key = hash_key
         self.range_key = range_key
-        self._dynamo_name = name
+        name = kwargs.pop("name", None)
+        if name is not None:
+            warnings.warn(
+                "The 'name=' kwarg will be removed in 2.0.0; use 'dynamo_name=' instead",
+                DeprecationWarning, stacklevel=2)
+            if dynamo_name is not None:
+                raise ValueError("Cannot provide 'name' and 'dynamo_name'")
+            dynamo_name = name
+        self._dynamo_name = dynamo_name
         kwargs['typedef'] = typedef
         super().__init__(**kwargs)
 

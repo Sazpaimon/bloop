@@ -1,6 +1,7 @@
 import datetime
 import logging
 import operator
+import warnings
 
 import pytest
 
@@ -405,6 +406,20 @@ def test_parent_hash(caplog):
 # COLUMN ======================================================================================================= COLUMN
 
 
+def test_column_dynamo_name_deprecation():
+    """Passing name= and dynamo_name= raises ValueError"""
+    with pytest.raises(ValueError):
+        Column(Integer, name="foo", dynamo_name="foo")
+
+    # passing just name is still ok but creates a warning
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        Column(Integer, name="foo")
+    assert len(w) == 1
+    assert issubclass(w[-1].category, DeprecationWarning)
+    assert "2.0.0" in str(w[-1].message)
+
+
 def test_column_dynamo_name():
     """ Returns model name unless dynamo name is specified """
     column = Column(Integer)
@@ -412,13 +427,13 @@ def test_column_dynamo_name():
     column.name = "foo"
     assert column.dynamo_name == "foo"
 
-    column = Column(Integer, name="foo")
+    column = Column(Integer, dynamo_name="foo")
     column.name = "bar"
     assert column.dynamo_name == "foo"
 
 
 def test_column_repr():
-    column = Column(Integer, name="f")
+    column = Column(Integer, dynamo_name="f")
     column.model = User
     column.name = "foo"
     assert repr(column) == "<Column[User.foo]>"
@@ -432,7 +447,7 @@ def test_column_repr():
 
 
 def test_column_repr_path():
-    column = Column(Integer, name="f")
+    column = Column(Integer, dynamo_name="f")
     column.model = User
     column.name = "foo"
 
@@ -522,6 +537,20 @@ def test_contains_container_types(container_column, engine):
 # INDEX ========================================================================================================= INDEX
 
 
+def test_index_dynamo_name_deprecation():
+    """Passing name= and dynamo_name= raises ValueError"""
+    with pytest.raises(ValueError):
+        Index(projection="keys", name="foo", dynamo_name="foo")
+
+    # passing just name is still ok but creates a warning
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        Index(projection="keys", name="foo")
+    assert len(w) == 1
+    assert issubclass(w[-1].category, DeprecationWarning)
+    assert "2.0.0" in str(w[-1].message)
+
+
 def test_index_dynamo_name():
     """returns model name unless dynamo name is specified"""
     index = Index(projection="keys")
@@ -529,7 +558,7 @@ def test_index_dynamo_name():
     index.name = "foo"
     assert index.dynamo_name == "foo"
 
-    index = Index(name="foo", projection="keys")
+    index = Index(dynamo_name="foo", projection="keys")
     index.name = "bar"
     assert index.dynamo_name == "foo"
 
@@ -658,7 +687,7 @@ def test_gsi_default_throughput():
 
 @pytest.mark.parametrize("projection", ["all", "keys", ["foo"]])
 def test_index_repr(projection):
-    index = Index(projection=projection, name="f")
+    index = Index(projection=projection, dynamo_name="f")
     index.model = User
     index.name = "by_foo"
     if isinstance(projection, list):
@@ -667,14 +696,14 @@ def test_index_repr(projection):
 
 
 def test_lsi_repr():
-    index = LocalSecondaryIndex(projection="all", range_key="key", name="f")
+    index = LocalSecondaryIndex(projection="all", range_key="key", dynamo_name="f")
     index.model = User
     index.name = "by_foo"
     assert repr(index) == "<LSI[User.by_foo=all]>"
 
 
 def test_gsi_repr():
-    index = GlobalSecondaryIndex(projection="all", hash_key="key", name="f")
+    index = GlobalSecondaryIndex(projection="all", hash_key="key", dynamo_name="f")
     index.model = User
     index.name = "by_foo"
     assert repr(index) == "<GSI[User.by_foo=all]>"
