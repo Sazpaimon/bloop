@@ -27,7 +27,7 @@ PACKAGES = [
 REQUIREMENTS = [
     "blinker==1.4",
     "boto3==1.4.4",
-    "declare==0.9.11",
+    "declare==0.9.12",
 ]
 
 if __name__ == "__main__":
