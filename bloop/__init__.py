@@ -56,5 +56,5 @@ __all__ = [
     # Misc
     "Condition", "QueryIterator", "ScanIterator", "Stream"
 ]
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 warnings.simplefilter('always', DeprecationWarning)

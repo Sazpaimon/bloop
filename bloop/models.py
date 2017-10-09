@@ -329,11 +329,13 @@ class Index(declare.Field):
     @property
     def name(self):
         with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             return self.model_name
 
     @name.setter
     def name(self, value):
         with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             self.model_name = value
 
     @property
@@ -561,11 +563,13 @@ class Column(declare.Field, ComparisonMixin):
     @property
     def name(self):
         with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             return self.model_name
 
     @name.setter
     def name(self, value):
         with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             self.model_name = value
 
     @property
